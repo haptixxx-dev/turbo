@@ -31,10 +31,13 @@ Turbo files should be created with the `.turbo` extension.
 
 ## Comments
 
-<!-- Single-line comment syntax, multi-line/block comments, doc comments (if any). -->
-
 ```turbo
-// TODO
+// Comments in turbo are written with double slashes like C++, Java and some other languages
+
+/*
+Multi line comments are written with a slash star syntax
+then they are ended with a star slash.
+*/
 ```
 
 ## Identifiers and Keywords
