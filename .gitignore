@@ -1,2 +1,4 @@
 build/
 submodules/llvm/build/
+.venv/
+site/

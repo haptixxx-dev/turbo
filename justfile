@@ -62,3 +62,9 @@ preset := env_var_or_default('PRESET', 'dev')
 jobs := env_var_or_default('JOBS', num_cpus())
 
 llvm_jobs := num_cpus()
+
+# --- docs ------------------------------------------------------------------
+
+build-docs:
+    source ./.venv/bin/activate
+    mkdocs build
