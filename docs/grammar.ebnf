@@ -1,0 +1,253 @@
+(* ======================================================================
+   Turbo grammar (BOILERPLATE / DRAFT)
+
+   Derived from the outline in docs/syntax.md. Only comments are actually
+   specified there so far; everything else is a placeholder guess based on
+   the "lua / python / ruby-like" intent. Every decision that is still open
+   is tagged  (* TODO: ... *)  so you can grep for it.
+
+   Notation (ISO 14977-ish):
+     =        definition            ;      end of rule
+     |        alternation           ,      concatenation (omitted for brevity)
+     [ x ]    optional              { x }  zero or more
+     ( x )    grouping              "x"    terminal
+     (* x *)  grammar comment       ? x ?  informal description
+   ====================================================================== *)
+
+
+(* ---------------------------------------------------------------------
+   1. Program structure
+   --------------------------------------------------------------------- *)
+
+program        = { statement } ;
+
+(* TODO: terminators. Assumed: newline OR ';' ends a statement.
+   The lexer should emit a NEWLINE token (suppressed after operators,
+   commas and opening brackets for line continuation). *)
+terminator     = ";" | NEWLINE ;
+
+block          = "{" , { statement } , "}" ;
+(* TODO: braces vs `do ... end` vs indentation. *)
+
+
+(* ---------------------------------------------------------------------
+   2. Statements
+   --------------------------------------------------------------------- *)
+
+statement      = declaration
+               | assignment_stmt
+               | if_stmt
+               | match_stmt
+               | while_stmt
+               | for_stmt
+               | break_stmt
+               | continue_stmt
+               | return_stmt
+               | try_stmt
+               | throw_stmt
+               | import_stmt
+               | function_decl
+               | struct_decl
+               | block
+               | expression_stmt
+               | terminator ;                      (* empty statement *)
+
+expression_stmt = expression , terminator ;
+
+(* --- Variables and constants ----------------------------------------- *)
+
+declaration    = ( "let" | "const" ) , identifier ,
+                 [ ":" , type ] ,
+                 [ "=" , expression ] , terminator ;
+(* TODO: multiple assignment / destructuring: `let a, b = f()`.
+   TODO: `const` must require an initialiser (semantic check, not grammar). *)
+
+assignment_stmt = assign_target , assign_op , expression , terminator ;
+assign_target  = postfix_expr ;                    (* must be an lvalue; checked semantically *)
+assign_op      = "=" | "+=" | "-=" | "*=" | "/=" | "%=" ;
+
+(* --- Control flow ---------------------------------------------------- *)
+
+if_stmt        = "if" , expression , block ,
+                 { "else" , "if" , expression , block } ,
+                 [ "else" , block ] ;
+
+match_stmt     = "match" , expression , "{" ,
+                 { match_arm } ,
+                 "}" ;
+match_arm      = ( pattern | "_" ) , "=>" , ( block | expression ) , [ "," ] ;
+pattern        = literal | identifier ;            (* TODO: ranges, destructuring, guards *)
+
+while_stmt     = "while" , expression , block ;
+
+for_stmt       = "for" , identifier , "in" , expression , block ;
+(* `expression` may be a range or any iterable collection. *)
+
+break_stmt     = "break" , terminator ;
+continue_stmt  = "continue" , terminator ;
+return_stmt    = "return" , [ expression_list ] , terminator ;
+
+(* --- Errors ---------------------------------------------------------- *)
+
+(* TODO: exceptions vs error values. Exceptions assumed here. *)
+try_stmt       = "try" , block , "catch" , [ identifier ] , block ;
+throw_stmt     = "throw" , expression , terminator ;
+
+(* --- Modules --------------------------------------------------------- *)
+
+(* TODO: import syntax and export rules. *)
+import_stmt    = "import" , string_literal , [ "as" , identifier ] , terminator ;
+
+
+(* ---------------------------------------------------------------------
+   3. Functions
+   --------------------------------------------------------------------- *)
+
+function_decl  = "fn" , identifier , "(" , [ param_list ] , ")" ,
+                 [ "->" , return_type ] , block ;
+
+param_list     = param , { "," , param } ;
+param          = [ "..." ] , identifier , [ ":" , type ] , [ "=" , expression ] ;
+(* "..." = variadic. TODO: named arguments at call sites. *)
+
+return_type    = type | "(" , type , { "," , type } , ")" ;   (* multiple returns *)
+
+lambda_expr    = "fn" , "(" , [ param_list ] , ")" ,
+                 [ "->" , return_type ] , ( block | "=>" , expression ) ;
+
+
+(* ---------------------------------------------------------------------
+   4. Structures / objects
+   --------------------------------------------------------------------- *)
+
+(* TODO: struct vs class vs table-based objects; inheritance/composition. *)
+struct_decl    = "struct" , identifier , "{" , { struct_member } , "}" ;
+struct_member  = field_decl | method_decl ;
+field_decl     = identifier , ":" , type , [ "=" , expression ] , terminator ;
+method_decl    = function_decl ;                   (* `self` implicit? TODO *)
+
+
+(* ---------------------------------------------------------------------
+   5. Types
+   --------------------------------------------------------------------- *)
+
+(* TODO: static vs dynamic. Annotations are optional in this draft. *)
+type           = type_name , [ "?" ]               (* "?" = nullable *)
+               | "[" , type , "]"                  (* array *)
+               | "{" , type , ":" , type , "}"     (* map *)
+               | "fn" , "(" , [ type , { "," , type } ] , ")" , [ "->" , return_type ] ;
+
+type_name      = "int" | "float" | "bool" | "string" | "nil" | "any"
+               | identifier ;                      (* user-defined struct *)
+(* TODO: finalise built-in type list (game types like Vec3, Entity?). *)
+
+
+(* ---------------------------------------------------------------------
+   6. Expressions   (lowest -> highest precedence)
+   TODO: confirm precedence table in docs/syntax.md#precedence.
+   --------------------------------------------------------------------- *)
+
+expression_list = expression , { "," , expression } ;
+
+expression     = ternary_expr ;
+
+ternary_expr   = coalesce_expr , [ "?" , expression , ":" , ternary_expr ] ;
+
+coalesce_expr  = or_expr , { "??" , or_expr } ;    (* null-coalescing; TODO *)
+
+or_expr        = and_expr , { ( "or" | "||" ) , and_expr } ;
+and_expr       = equality_expr , { ( "and" | "&&" ) , equality_expr } ;
+(* TODO: pick ONE spelling for logical operators. *)
+
+equality_expr  = comparison_expr , { ( "==" | "!=" ) , comparison_expr } ;
+comparison_expr = range_expr , { ( "<" | ">" | "<=" | ">=" ) , range_expr } ;
+range_expr     = additive_expr , [ ( ".." | "..=" ) , additive_expr ] ;   (* TODO *)
+additive_expr  = multiplicative_expr , { ( "+" | "-" ) , multiplicative_expr } ;
+multiplicative_expr = unary_expr , { ( "*" | "/" | "%" ) , unary_expr } ;
+
+unary_expr     = ( "-" | "!" | "not" ) , unary_expr
+               | postfix_expr ;
+
+postfix_expr   = primary_expr ,
+                 { call_suffix | index_suffix | member_suffix } ;
+
+call_suffix    = "(" , [ argument_list ] , ")" ;
+index_suffix   = "[" , expression , "]" ;          (* TODO: slicing a[1:3] *)
+member_suffix  = "." , identifier ;
+
+argument_list  = argument , { "," , argument } ;
+argument       = [ identifier , ":" ] , expression ;   (* optional named arg *)
+
+primary_expr   = literal
+               | identifier
+               | array_literal
+               | map_literal
+               | lambda_expr
+               | "(" , expression , ")" ;
+
+array_literal  = "[" , [ expression_list , [ "," ] ] , "]" ;
+
+map_literal    = "{" , [ map_entry , { "," , map_entry } , [ "," ] ] , "}" ;
+map_entry      = ( identifier | string_literal | "[" , expression , "]" ) ,
+                 ":" , expression ;
+(* NOTE: `{` is ambiguous between block and map literal in statement
+   position. Parser should treat a leading `{` as a block there. *)
+
+
+(* ---------------------------------------------------------------------
+   7. Lexical grammar
+   --------------------------------------------------------------------- *)
+
+literal        = number_literal | string_literal | boolean_literal | nil_literal ;
+
+boolean_literal = "true" | "false" ;
+nil_literal    = "nil" ;                           (* TODO: nil / null / none *)
+
+number_literal = integer_literal | float_literal ;
+
+integer_literal = decimal_int | hex_int | bin_int | oct_int ;
+decimal_int    = digit , { digit | "_" } ;
+hex_int        = "0x" , hex_digit , { hex_digit | "_" } ;
+bin_int        = "0b" , bin_digit , { bin_digit | "_" } ;
+oct_int        = "0o" , oct_digit , { oct_digit | "_" } ;
+
+float_literal  = decimal_int , "." , decimal_int , [ exponent ]
+               | decimal_int , exponent ;
+exponent       = ( "e" | "E" ) , [ "+" | "-" ] , decimal_int ;
+
+(* TODO: quote styles, multi-line strings, interpolation (`"hp: ${hp}"`). *)
+string_literal = '"' , { string_char | escape_seq } , '"' ;
+string_char    = ? any character except '"', '\' and newline ? ;
+escape_seq     = "\" , ( "n" | "t" | "r" | "0" | '"' | "\" ) ;
+
+identifier     = ( letter | "_" ) , { letter | digit | "_" } ;    (* minus keywords *)
+
+letter         = "a" | ... | "z" | "A" | ... | "Z" ;
+digit          = "0" | ... | "9" ;
+hex_digit      = digit | "a" | ... | "f" | "A" | ... | "F" ;
+oct_digit      = "0" | ... | "7" ;
+bin_digit      = "0" | "1" ;
+
+(* --- Comments & whitespace (discarded by the lexer) ------------------ *)
+
+line_comment   = "//" , { ? any character except newline ? } ;
+block_comment  = "/*" , { ? any character ? } , "*/" ;     (* TODO: nesting? *)
+whitespace     = " " | "\t" | "\r" ;                       (* NEWLINE is significant *)
+
+(* --- Reserved keywords (draft) --------------------------------------- *)
+
+keyword        = "let" | "const" | "fn" | "return" | "if" | "else" | "match"
+               | "while" | "for" | "in" | "break" | "continue"
+               | "struct" | "import" | "as" | "try" | "catch" | "throw"
+               | "true" | "false" | "nil" | "and" | "or" | "not" ;
+
+
+(* ---------------------------------------------------------------------
+   8. Game integration
+   --------------------------------------------------------------------- *)
+
+(* TODO: entry points / event hooks (on_load, on_tick, on_event ...).
+   If these become dedicated syntax rather than ordinary functions, add:
+
+   event_decl = "on" , identifier , "(" , [ param_list ] , ")" , block ;
+   and add event_decl to `statement`. *)
