@@ -1,0 +1,137 @@
+{
+  "version": 8,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 31,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "dev",
+      "displayName": "Development (ninja + clang + lld + ccache)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/dev",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_BUILD_PARALLEL_LEVEL": "11",
+        "LLVM_DIR": "${sourceDir}/submodules/llvm/build/lib/cmake/llvm",
+        "CMAKE_PREFIX_PATH": "/opt/homebrew"
+      }
+    },
+    {
+      "name": "dev-no-ccache",
+      "displayName": "Development (without ccache)",
+      "inherits": "dev",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER_LAUNCHER": "",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "",
+        "CMAKE_PREFIX_PATH": "/opt/homebrew"
+      }
+    },
+    {
+      "name": "cl",
+      "displayName": "Release + IPO, no ccache (fast rebuild, clean product)",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build/cl",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER_LAUNCHER": "",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "YES",
+        "CMAKE_PREFIX_PATH": "/opt/homebrew"
+      }
+    },
+    {
+      "name": "linux-dev",
+      "displayName": "Linux development (ninja + clang + mold + ccache)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-dev",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_BUILD_PARALLEL_LEVEL": "0",
+        "LLVM_DIR": "${sourceDir}/submodules/llvm/build/lib/cmake/llvm"
+      }
+    },
+    {
+      "name": "linux-cl",
+      "displayName": "Linux release + IPO, no ccache (mold linking)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-cl",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_BUILD_PARALLEL_LEVEL": "0",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "YES",
+        "LLVM_DIR": "${sourceDir}/submodules/llvm/build/lib/cmake/llvm"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "displayName": "Build dev (parallel across all cores)",
+      "configurePreset": "dev",
+      "jobs": 11
+    },
+    {
+      "name": "dev-no-ccache",
+      "configurePreset": "dev-no-ccache",
+      "jobs": 11
+    },
+    {
+      "name": "cl",
+      "configurePreset": "cl",
+      "jobs": 11
+    },
+    {
+      "name": "linux-dev",
+      "configurePreset": "linux-dev",
+      "jobs": 0
+    },
+    {
+      "name": "linux-cl",
+      "configurePreset": "linux-cl",
+      "jobs": 0
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "cl",
+      "configurePreset": "cl",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-dev",
+      "configurePreset": "linux-dev",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-cl",
+      "configurePreset": "linux-cl",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}
