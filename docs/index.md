@@ -1,17 +1,8 @@
-# Welcome to MkDocs
+# Turbo
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+Turbo is a compiled scripting language built atop the LLVM compiler toolchain.
 
-## Commands
+Turbo is a programming language meant for modification of Project Friction and its gameplay.
+The language is compiled. (possibly using a custom compiler binary?)
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+To start writing in Turbo, have a look at the [syntax](./syntax.md)

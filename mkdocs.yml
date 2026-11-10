@@ -2,4 +2,6 @@ site_name: Turbo Documentation
 theme:
   name: mkdocs
   user_color_mode_toggle: true
-  
+nav:
+  - Home: index.md
+  - Syntax: syntax.md

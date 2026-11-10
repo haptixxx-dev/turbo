@@ -1,7 +1,7 @@
 # Syntax
 
 Turbo's syntax closely follows that of other scripting languages like lua, python and ruby.
-Turbo however has some minor additions and changes which make it easier to navigate as a scripting language for modifying `project name` and it's gameplay.
+Turbo however has some minor additions and changes which make it easier to navigate as a scripting language for modifying Project Friction and it's gameplay.
 
 This documentation is being updates as development occurs, and will absolutely change in the future.
 
